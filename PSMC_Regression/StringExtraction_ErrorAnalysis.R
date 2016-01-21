@@ -131,7 +131,7 @@ for (infile in filelist) { #A lot of clever regex is/are used here to take value
   Int = append(Int,as.numeric(gsub(pattern = "(.*Int)(.*)(\\*)(.*)(Split.*)", replacement = "\\2", x = infile))) # for something like 10*1, only extracts the 10 (we wouldn't do anything like x*y for y!= 1)
   Split_tmp = as.numeric(gsub(pattern = "(.*Split)(.*)(\\.txt)", replacement = "\\2", x = infile))
   Split = append(Split,Split_tmp)
-  Bp_per_contig = append(Bp_per_contig,ceiling(Bp_tmp/Split_tmp)) # to convert from Mbp to bp)
+  Bp_per_contig = append(Bp_per_contig,max(ceiling(Bp_tmp/Split_tmp),8000)) # to convert from Mbp to bp)
   Pop_Dynamics_Type_tmp = gsub(pattern = "(\\/.*)(.*)(Bp.*)", replacement = "\\2", x = infile)
   Pop_Dynamics_Type = append(Pop_Dynamics_Type,Pop_Dynamics_Type_tmp)
   
@@ -148,8 +148,8 @@ for (infile in filelist) { #A lot of clever regex is/are used here to take value
 } 
 Results = data.frame(Bp,Int,Split,Bp_per_contig,Per_Site_Mut_Rate,Per_Site_Recomb_Rate,Pop_Dynamics_Type,Error)
 
-View(Results)
-
+#View(Results)
+write.table(Results,'results.txt')
 
 ######################################################
 ######################################################
