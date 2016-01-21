@@ -33,6 +33,7 @@ ms_eN_2_vec = function(ms_input, t_or_p) {
 # takes ms_input of form "-eN 0.0055 0.0832 -eN 0.0089 0.0489" copied from ms
 # t_or_p can be TRUE or FALSE. If TRUE, gives times. If FALSE, gives populations.
   TimesPops = as.numeric(unlist(str_extract_all(gsub(pattern = "-eN ", replacement = "", x = ms_input), "[\\.0-9e-]+")))  # remove the -eN switch, convert to a vector
+
   if (t_or_p == TRUE) {
     Times = 4*TimesPops[c(TRUE,FALSE)] # extracts the odd values (i.e. the times) and scales
     return(Times)
@@ -46,10 +47,25 @@ ms_eN_2_vec = function(ms_input, t_or_p) {
 msFile_eN_2_vec = function(msFilePath, t_or_p) {
   # takes msFilePath as a path to a .ms file and returns:
   # t_or_p can be TRUE or FALSE. If TRUE, gives times. If FALSE, gives populations.
+  
+  #frankly this just duct-tapes together the filepath input into something that fitted in the old function
+  #this can almost certainly be written better but it is 100% functional so it's a low priority
   ms_input=system2('head',args=paste('-n 1 ',msFilePath),stdout=TRUE)
   ms_input=paste('-eN',regmatches(ms_input, regexpr("-eN", ms_input), invert = TRUE)[[1]][2])
   ms_input=regmatches(ms_input, regexpr("-l", ms_input), invert = TRUE)[[1]][1]
   TimesPops = as.numeric(unlist(str_extract_all(gsub(pattern = "-eN ", replacement = "", x = ms_input), "[\\.0-9e-]+")))  # remove the -eN switch, convert to a vector
+  
+  #If the data doesn't have a specified population demographic we'll assume it's constant over a big domain
+  if(length(TimesPops)==0){
+    if (t_or_p == TRUE) {
+      return(4*c(1e-5,1:100))
+    }
+    else {
+      return(4*rep(1,length(constantPopTimes)))    
+    }
+  }
+  
+  #But if there are population changes we should return them
   if (t_or_p == TRUE) {
     Times = 4*TimesPops[c(TRUE,FALSE)] # extracts the odd values (i.e. the times) and scales
     return(Times)
@@ -60,21 +76,20 @@ msFile_eN_2_vec = function(msFilePath, t_or_p) {
   }
 }
 
-#Automatically discover all files and assign times and pop sizes to variables
+#Automatically discover all files and assign times and pop sizes to variables from *.ms files
 simulationNames=vector()
-simulationDirs=list.dirs(recursive = FALSE)
+simulationDirs=list.dirs(recursive = FALSE) #use the subdirectories as names for the simulations, assuming that all files within those subdirectories contain the same starting name
 for(sims in simulationDirs){
-  firstMsFile = list.files(pattern = "*ms",path = sims,recursive=T)[1]
-  msFilePath=paste(sims,firstMsFile,sep='/')
+  firstMsFile = list.files(pattern = "*ms",path = sims,recursive=T)[1] #use the first ms file, since they all run simulations with the same population dynamics
+  msFilePath=paste(sims,firstMsFile,sep='/') 
   simName=strsplit(sims,split='/')[[1]][2] #split between ./ and the the name, [[1]][2] chooses the name from the list
-  simulationNames=append(simulationNames,simName)
-  assign(paste(simName,'Times',sep=''),msFile_eN_2_vec(msFilePath,TRUE))
-  assign(paste(simName,'Pops',sep=''),msFile_eN_2_vec(msFilePath,FALSE))
+  simulationNames=append(simulationNames,simName) #keep a list of all simulations this works through
+  assign(paste(simName,'Times',sep=''),msFile_eN_2_vec(msFilePath,TRUE)) #adding new variable in the format 'simNameTimes' which records the times for each simulation
+  assign(paste(simName,'Pops',sep=''),msFile_eN_2_vec(msFilePath,FALSE)) #adding new variable in the format 'simNamePops' which records the population sizes for each simulation
 }
-constantPopTimes = 4*c(0.01,1:100) # dummy times
-constantPopPops = 4*rep(1,length(constantPopTimes))
 
 # note: we can set these here because it's the same for all of the simulations we've run so far. HOWEVER, these rates are scaled by the number of bp in the sample. this will be addressed in the for loop later
+# might automate this later while reading the *.ms files so we can consider more than one rate
 mut_rate_theta = 65130
 recomb_rate_rho = 10973
 
@@ -89,6 +104,8 @@ for (infile in filelist) {
   logmaxs[i] = log(max(data.infile$t_k/2))
   i = i+1
 }
+
+#loop over the different simulations and record their 'TRUE' start and end times
 for(sims in simulationNames){
   logmins=append(logmins,log(min(get(paste(sims,'Times',sep='')))))
   logmaxs=append(logmaxs,log(max(get(paste(sims,'Times',sep='')))))
@@ -108,7 +125,7 @@ Error = NULL
 
 # files have names like "fauxHuman/fauxHumanBp100000Int10*1Split1/fauxHumanBp100000Int10*1Split1.txt"
 
-for (infile in filelist) { # make sure I change things to Shaun's file format
+for (infile in filelist) { #A lot of clever regex is/are used here to take values from file names
   Bp_tmp = as.numeric(gsub(pattern = "(.*Bp)(.*)(Int.*)", replacement = "\\2", x = infile))
   Bp = append(Bp,Bp_tmp)
   Int = append(Int,as.numeric(gsub(pattern = "(.*Int)(.*)(\\*)(.*)(Split.*)", replacement = "\\2", x = infile))) # for something like 10*1, only extracts the 10 (we wouldn't do anything like x*y for y!= 1)
@@ -125,7 +142,7 @@ for (infile in filelist) { # make sure I change things to Shaun's file format
   
   # error analysis
   data = read.table(infile,header=TRUE)
-  #simplified if statements to concatenating Pop_Dynamics_Type_tmp (which should hopefully contain the name of the sim we're running)
+  #calculates the 'error' as the integral of the difference between curves over a distance
   ErrorVal = integrate(absdifference, logmax_of_mins, logmin_of_maxs, d1=log(get(paste(Pop_Dynamics_Type_tmp,'Times',sep=''))), d2=get(paste(Pop_Dynamics_Type_tmp,'Pops',sep='')), d3=log(data$t_k/2), d4=data$lambda_k, subdivisions=10000)$value 
   Error = append(Error,ErrorVal)
 } 
