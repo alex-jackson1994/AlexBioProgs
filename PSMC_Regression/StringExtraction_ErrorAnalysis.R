@@ -1,7 +1,7 @@
 library(stringr)
 
-setwd("~/Documents/SummerScholarship/simulatedData/regressionSimulations/") 
-#setwd("/home/alex/Desktop/Simulations/Regression/")
+#setwd("~/Documents/SummerScholarship/simulatedData/regressionSimulations/") 
+setwd("/home/alex/Desktop/Simulations/Regression/")
 
 filelist = list.files(pattern = "*.txt",recursive=T)
 

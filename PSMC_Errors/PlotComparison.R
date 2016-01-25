@@ -80,4 +80,24 @@ for (infile in rev(filelist40_2)) {
 legend("topleft",rev(filelist40_2),fill=collist,bty="n",cex=0.8) #
 
 ##### test with some of shaun's stuff
+### DECREASING POP IS STUFFED
 
+# -eN 0.01 1 -eN 0.2 1.5 -eN 0.4 2 -eN 0.6 3 -eN 0.8 4 -eN 1 5 -eN 2 6 -eN 3 6
+
+TrueTimes = 4*c(.01, .2, .4, .6, .8, 1, 2, 3)
+TruePops = 4*c(1, 1.5, 2, 3, 4, 5, 6, 6)
+setwd("/home/alex/Desktop/Simulations/Regression/decreasingPop/decreasingPop/")
+filelist_dec_pop = list.files(pattern = "*.txt",recursive=T)
+# filelist40 = filelist40[-7] # remove the fullData file
+
+#fullData40 = read.table("40Mbp_run.ms.psmcfa.psmc.txt",header=TRUE)
+plot(log(TrueTimes),TruePops,"s",ylim=c(0,30),xlim=c(-4,4),lwd=5,main="Decr. pop")
+
+counter = 1
+for (infile in rev(filelist_dec_pop)) {
+  infile.data = read.table(infile,header=TRUE)
+  lines(log(infile.data$t_k/2),infile.data$lambda_k,"s",col=collist[counter],lwd=2.5)
+  print(infile)
+  counter = counter + 1
+}
+legend("topleft",rev(filelist40_2),fill=collist,bty="n",cex=0)
