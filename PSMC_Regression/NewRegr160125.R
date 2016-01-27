@@ -1,12 +1,14 @@
 ShaunRegressionInput <- read.csv("~/Desktop/Software/AlexBioProgs/160121_ErrorRegression/ShaunRegressionInput.txt", sep="")
 library("ggplot2", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.2")
 library("RColorBrewer", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.2")
+library(nlme)
 
 Regr20Mbp = ShaunRegressionInput[ShaunRegressionInput$Bp == 20000000,] # only look at one length of genome
 Regr20Mbp = Regr20Mbp[,-c(3,5,6)] # remove mutation and recomb rates, remove split but keep bp per contig
 head(Regr20Mbp)
 summary(Regr20Mbp$Pop_Dynamics_Type)
 summary(Regr20Mbp$Bp)
+ggplot(data = Regr20Mbp, aes(log(Bp_per_contig), Error, colour = Pop_Dynamics_Type)) + geom_point()
 
 FH_Regr20Mbp = Regr20Mbp[Regr20Mbp$Pop_Dynamics_Type == "fauxHuman",] # only look at faxuHuman
 head(FH_Regr20Mbp)
@@ -37,18 +39,139 @@ logBpPC_v_logE
 #############33
 
 # NoCon_Regr20Mbp = Regr20Mbp[Regr20Mbp$Pop_Dynamics_Type != "constantPop",] # forget about constant pop
+#NoCon_Regr20Mbp = Regr20Mbp[Regr20Mbp$Pop_Dynamics_Type != "psmcSim2" & Regr20Mbp$Pop_Dynamics_Type != "constantPop",] # forget about sim2
 NoCon_Regr20Mbp = Regr20Mbp[Regr20Mbp$Pop_Dynamics_Type != "psmcSim2",] # forget about sim2
+
 droplevels(NoCon_Regr20Mbp$Pop_Dynamics_Type) # gets rid of the constantPop level
 head(NoCon_Regr20Mbp)
-levels(NoCon_Regr20Mbp$Pop_Dynamics_Type)
+summary(NoCon_Regr20Mbp$Pop_Dynamics_Type)
 
+# remove repeated errors?
+NoCon_Regr20Mbp_Uniq <- NoCon_Regr20Mbp[!duplicated(NoCon_Regr20Mbp$Error),] 
+# I don't reckon that's done anything
 
 #plot(log(NoCon_Regr20Mbp$Error))
 #plot(NoCon_Regr20Mbp$Error)
 # qplot()
 
-lBpPC_v_lE = ggplot(NoCon_Regr20Mbp, aes(x = log(Bp_per_contig), y = log(Error), colour = Pop_Dynamics_Type) ) + geom_point(size=2.5)
+# error vs log bp per cont
+ggplot(NoCon_Regr20Mbp, aes(x = log(Bp_per_contig), y = Error, colour = Pop_Dynamics_Type) ) + geom_point(size=2.5) + geom_smooth() + facet_grid(Int ~ Pop_Dynamics_Type)
 lBpPC_v_lE # there appears to be no relationship b/w Bp_per_contig, error val depends on Pop_Dynamics_Type
 
-Int_v_lE = ggplot(NoCon_Regr20Mbp, aes(x = Int, y = log(Error), colour = Pop_Dynamics_Type) ) + geom_point(size=2.5)
+# error vs int
+ggplot(NoCon_Regr20Mbp, aes(x = factor(Int), y = Error, colour = Pop_Dynamics_Type) ) + geom_boxplot() + facet_wrap(~Pop_Dynamics_Type, scale = "free_y")
 Int_v_lE
+
+# straight interaction
+IntBp_v_lE = ggplot(NoCon_Regr20Mbp, aes(x = Int * log(Bp_per_contig), y = Error, colour = Pop_Dynamics_Type) ) + geom_point(size=2.5)
+IntBp_v_lE
+
+##### TAKEN STRAIGHT FROM JONO'S BULL EEG PAPER
+
+### plots look crap but lets try fitting models anyway
+# just fixed?
+NoCon_Regr20Mbp$binvals = 
+
+M1 <- gls(Error ~ Int * log(Bp_per_contig) , data = NoCon_Regr20Mbp, method = "REML")
+summary(M1)
+
+# random int
+M2 <- lme(Error ~ Int * log(Bp_per_contig) , random = ~ 1 | Pop_Dynamics_Type, data = NoCon_Regr20Mbp, method = "REML")
+summary(M2)
+
+
+
+# random eff
+M3 = lme(Error ~ 1, random = ~ 1 | Pop_Dynamics_Type, data = NoCon_Regr20Mbp, method = "REML")
+#summary(M3) # WHY DOES THIS SAY DIFF NO OF OBS ON AIC???
+
+AIC(M1, M2) 
+BIC(M1, M2)
+anova(M1,M2) # M2 is better by all accounts...
+summary(M2)
+anova(M2)
+ # looks like we can remove the interaction term
+M2 <- update(M2, .~. - Int:log(Bp_per_contig))
+anova(M2) # all signif
+
+# not sure what this does
+as.data.frame(allEffects(M2)[[1]]) %>%
+  ggplot(aes(TS, fit)) +
+  geom_point() +
+  geom_line(aes(group = 1)) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.1) +
+  labs(x = "Time stamp", y = "AUC for F50 moving average")
+
+# check residuals I guess...
+
+mod_checks = data.frame(res = residuals(M2, type = "normalized"),
+                        fit = fitted(M2),
+                        lab = labels(residuals(M2)),
+                        logBpPC = log(NoCon_Regr20Mbp$Bp_per_contig),
+                        psmc_ints = NoCon_Regr20Mbp$Int)
+
+p1 = ggplot(data=mod_checks, aes(fit, res, colour = lab)) + geom_point(size=1.5)
+p1 # does not look particularly good...
+p2 = ggplot(data=mod_checks, aes(logBpPC, res, colour = lab) ) + geom_point(size = 1.5)
+p2 # bitof an upwards trend
+p3 = ggplot(data=mod_checks, aes(psmc_ints, res, colour = lab) ) + geom_point(size = 1.5)
+p3 # fine
+p4 = ggplot(data = mod_checks, aes(sample = res)) + stat_qq()
+p4 # good but for tail
+
+summary(M2)
+
+
+###################################################3
+############# CHANGE POINT ######################
+##################################################
+
+# based off this: there is some kind of upward trend for small bp per contig
+ggplot(NoCon_Regr20Mbp, aes(x = log(Bp_per_contig), y = Error, colour = Pop_Dynamics_Type) ) + geom_point(size=2.5) + geom_smooth() + facet_grid(Int ~ Pop_Dynamics_Type)
+
+# maybe just try with psmcSim1 first
+s1_data = NoCon_Regr20Mbp[NoCon_Regr20Mbp$Pop_Dynamics_Type == "psmcSim1",]
+
+#binvals = log(s1_data$Bp_per_contig) < 13
+#binvals = binvals + 0 # converts T.F to a numerical vector
+
+cutoffs = c(40:80)/4
+AICs = NULL
+for (cutoff_val in cutoffs) {
+  s1_data$binvals = log(s1_data$Bp_per_contig) < cutoff_val
+  s1_data$binvals = s1_data$binvals + 0 # converts T/F to numeric
+  
+  chng_lme = lme(Error ~ log(Bp_per_contig) * binvals, random = ~ 1 | Int, data = s1_data)
+  AICs = append(AICs, AIC(chng_lme))
+}
+
+#AIC_vs_cut = data.frame(cutoffs, AICs)
+plot(cutoffs, AICs)
+
+# cutoff of 11 looks okay
+# exp(11)
+binvals11 = log(s1_data$Bp_per_contig) < 11
+binvals11 = binvals11 + 0
+lm11 = lm(s1_data$Error ~ log(s1_data$Bp_per_contig) * binvals11)
+summary(lm11)
+ggplot(s1_data, aes(x = log(Bp_per_contig), y = Error, colour = factor(Int) )) + geom_point(size=2.5) + geom_smooth() + facet_grid(~ Int)
+# maybe i jeust need to loo kat one int
+
+# THIS DOESNT WORK BECAUSE OF SINGULARITIES
+#################################################3
+####################################################3
+################################################
+
+# C = c(40:80)/4
+# for (cutoff in C) {
+#   df_L = s1_data[log(s1_data$Bp_per_contig) < C,]
+#   df_U = s1_data[log(s1_data$Bp_per_contig) >= C,]
+#   
+#   lm_L = lm(Error ~ Bp_per_contig, data = df_L)
+#   lm_U = lm(Error ~ Bp_per_contig, data = df_U)
+#   
+# }
+
+###########################################
+tr_data = NoCon_Regr20Mbp[NoCon_Regr20Mbp$Pop_Dynamics_Type == "trench",]
+ggplot(tr_data, aes(x = log(Bp_per_contig), y = Error, colour = factor(Int) )) + geom_point(size=2.5) + geom_smooth() + facet_grid(~ Int)
