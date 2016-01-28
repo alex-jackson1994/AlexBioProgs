@@ -175,3 +175,58 @@ ggplot(s1_data, aes(x = log(Bp_per_contig), y = Error, colour = factor(Int) )) +
 ###########################################
 tr_data = NoCon_Regr20Mbp[NoCon_Regr20Mbp$Pop_Dynamics_Type == "trench",]
 ggplot(tr_data, aes(x = log(Bp_per_contig), y = Error, colour = factor(Int) )) + geom_point(size=2.5) + geom_smooth() + facet_grid(~ Int)
+
+###############
+### IDEA:
+###############
+
+# Look at the three plots with the most obvious change point, which are fH Int=10, s1 Int=20, and s1 Int=30. See if I can find a C value (change point) which is optimal for all. Procedure:
+# for a C value in a range
+  # fit the Error ~ Bp_per_contig * binvals model 
+  # add the AICs for all three (don't need scaling as from same number of observations for all)
+# find C which minimises the summed AIC
+
+ggplot(NoCon_Regr20Mbp, aes(x = log(Bp_per_contig), y = Error, colour = Pop_Dynamics_Type) ) + geom_point(size=2.5) + geom_smooth() + facet_grid(Pop_Dynamics_Type ~ Int, scale = "free_y")
+
+cutoffs = c(40:80)/4
+sum_AICs = NULL
+
+fHInt10 = NoCon_Regr20Mbp[NoCon_Regr20Mbp$Pop_Dynamics_Type == "fauxHuman" & NoCon_Regr20Mbp$Int == 10,]
+s1Int20 = NoCon_Regr20Mbp[NoCon_Regr20Mbp$Pop_Dynamics_Type == "psmcSim1" & NoCon_Regr20Mbp$Int == 20,]
+s1Int30 = NoCon_Regr20Mbp[NoCon_Regr20Mbp$Pop_Dynamics_Type == "psmcSim1" & NoCon_Regr20Mbp$Int == 30,]
+
+for (C_val in cutoffs) {
+  fHInt10_binvals = log(fHInt10$Bp_per_contig) < C_val
+  fHInt10_binvals = fHInt10_binvals + 0
+  lm_fHInt10 = lm(fHInt10$Error ~ log(fHInt10$Bp_per_contig) * fHInt10_binvals)
+  
+  s1Int20_binvals = log(s1Int20$Bp_per_contig) < C_val
+  s1Int20_binvals = s1Int20_binvals + 0
+  lm_s1Int20 = lm(s1Int20$Error ~ log(s1Int20$Bp_per_contig) * s1Int20_binvals)
+  
+  s1Int30_binvals = log(s1Int30$Bp_per_contig) < C_val
+  s1Int30_binvals = s1Int30_binvals + 0
+  lm_s1Int30 = lm(s1Int30$Error ~ log(s1Int30$Bp_per_contig) * s1Int30_binvals)
+  
+  sum_AICs = append(sum_AICs, AIC(lm_fHInt10) + AIC(lm_s1Int20) + AIC(lm_s1Int30) ) 
+}
+AICs_vs_Cval = data.frame(cutoffs, sum_AICs)
+plot(AICs_vs_Cval$cutoffs, AICs_vs_Cval$sum_AICs) # LOOKS LIKE 11
+
+C_val = 11
+
+fHInt10_binvals = log(fHInt10$Bp_per_contig) < C_val
+fHInt10_binvals = fHInt10_binvals + 0
+lm_fHInt10 = lm(fHInt10$Error ~ log(fHInt10$Bp_per_contig) * fHInt10_binvals)
+
+s1Int20_binvals = log(s1Int20$Bp_per_contig) < C_val
+s1Int20_binvals = s1Int20_binvals + 0
+lm_s1Int20 = lm(s1Int20$Error ~ log(s1Int20$Bp_per_contig) * s1Int20_binvals)
+
+s1Int30_binvals = log(s1Int30$Bp_per_contig) < C_val
+s1Int30_binvals = s1Int30_binvals + 0
+lm_s1Int30 = lm(s1Int30$Error ~ log(s1Int30$Bp_per_contig) * s1Int30_binvals)
+
+####
+
+###
