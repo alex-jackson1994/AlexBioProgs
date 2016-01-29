@@ -81,16 +81,61 @@ summary(lme1)
 lme2
 
 M1 <- gls(RtError ~ Bp + Int + Pop_Dynamics_Type + lBpPC + Bp:Int + Bp:Pop_Dynamics_Type + Bp:lBpPC + Int:Pop_Dynamics_Type,  data = data, method = "REML")
-M2 <- lmer(RtError ~ Bp * Int * lBpPC + (1 | Pop_Dynamics_Type), data = data)
-M3 <- lmer(RtError ~ Bp * Int * lBpPC + (1 + Bp | Pop_Dynamics_Type), data = data)
-M4 <- lmer(RtError ~ Bp * Int * lBpPC + (1 + Bp + Int | Pop_Dynamics_Type), data = data)
-M5 <- lmer(RtError ~ Bp * Int * lBpPC + (1 + Bp + Int + lBpPC| Pop_Dynamics_Type), data = data)
-AIC(M1, M2, M3, M4, M5)
+M2 <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 | Pop_Dynamics_Type), data = data); summary(M2);
+M3 <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Bp | Pop_Dynamics_Type), data = data); summary(M3)
 
+# getting some probs with some one. SCALE THE DATA. From the scale manual, https://stat.ethz.ch/R-manual/R-devel/library/base/html/scale.html, centering is performed by subtracting the mean from each value of the data. Scaling is done by dividing each of the (centered) values by their standard deviation.
+numcols <- names(data)
+data_s = data
+data_s[,1] <- scale(data_s[,1])
+data_s[,2] <- scale(data_s[,2])
+data_s[,4] <- scale(data_s[,4])
+data_s[,5] <- scale(data_s[,5])
+M1s <- gls(RtError ~ Bp + Int + Pop_Dynamics_Type + lBpPC + Bp:Int + Bp:Pop_Dynamics_Type + Bp:lBpPC + Int:Pop_Dynamics_Type,  data = data_s, method = "REML"); summary(M1s)
+M1s_remPop <- gls(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC,  data = data_s, method = "REML"); summary(M1s_remPop)
+M2s <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 | Pop_Dynamics_Type), data = data_s); summary(M2s);
+M3as <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Bp | Pop_Dynamics_Type), data = data_s); summary(M3as)
+M3bs <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Int | Pop_Dynamics_Type), data = data_s); summary(M3bs)
+M4s <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Bp + Int | Pop_Dynamics_Type), data = data_s); summary(M4s)
+Msfull <- lmer(RtError ~ Bp * Int * lBpPC + (1 + Bp + Int | Pop_Dynamics_Type), data = data_s); summary(Msfull) #  not as good as M4s anyway...
+# M5 <- lmer(RtError ~ Bp * Int * lBpPC + (1 + Bp + Int + lBpPC| Pop_Dynamics_Type), data = data)
+AIC(M1s, M1s_remPop, M2s, M3as, M3bs, M4s)
+# AIC(M1, M2, M3)
+
+summary(M4s)
+anova(M4s)
+
+# assumption checking
+#M4s <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Bp + Int | Pop_Dynamics_Type), data = data_s); summary(M4s)
+data_s$res = residuals(M4s)
+data_s$fit = fitted(M4s)
+ggplot(data_s, aes(x = fit, y = res, colour = Pop_Dynamics_Type) ) + geom_point(size=2.5) # i dunno
+ggplot(data = data_s, aes(sample = res)) + stat_qq() # fairly linear... i guess
+qplot(Bp, res, colour = Pop_Dynamics_Type, data = data_s) + geom_smooth() # looks fine, altho trench less variance
+qplot(Int, res, colour = Pop_Dynamics_Type, data = data_s) #+ geom_smooth() # looks fine, smoothing doesn't work, trench smaller
+qplot(lBpPC, res, colour = Pop_Dynamics_Type, data = data_s) + geom_smooth() # looks fine, altho trench less variance
+qplot(Bp*Int, res, colour = Pop_Dynamics_Type, data = data_s) + geom_smooth() # a bit todghy tbh, esp fauxHuman
+qplot(Bp*lBpPC, res, colour = Pop_Dynamics_Type, data = data_s) + geom_smooth() # looks fine, altho trench less variance
+qplot(Pop_Dynamics_Type, res, colour = Pop_Dynamics_Type, data = data_s) + geom_smooth() # trench less variance ************************************** problem?
+
+M5s <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Bp + Int + Bp:Int| Pop_Dynamics_Type), data = data_s); summary(M5s)
+M6s <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Bp + Int + Bp:Int+ Bp:lBpPC | Pop_Dynamics_Type), data = data_s); summary(M6s)
+AIC(M5s, M6s)
+
+data_s$res = residuals(M5s)
+data_s$fit = fitted(M5s)
+ggplot(data_s, aes(x = fit, y = res, colour = Pop_Dynamics_Type) ) + geom_point(size=2.5) # i dunno
+ggplot(data = data_s, aes(sample = res)) + stat_qq() # fairly linear... i guess
+qplot(Bp, res, colour = Pop_Dynamics_Type, data = data_s) + geom_smooth() # looks fine, altho trench less variance
+qplot(Int, res, colour = Pop_Dynamics_Type, data = data_s) #+ geom_smooth() # looks fine, smoothing doesn't work, trench smaller
+qplot(lBpPC, res, colour = Pop_Dynamics_Type, data = data_s) + geom_smooth() # looks fine, altho trench less variance
+qplot(Bp*Int, res, colour = Pop_Dynamics_Type, data = data_s) + geom_smooth() # a bit todghy tbh, esp fauxHuman
+qplot(Bp*lBpPC, res, colour = Pop_Dynamics_Type, data = data_s) + geom_smooth() # looks fine, altho trench less variance
+qplot(Pop_Dynamics_Type, res, colour = Pop_Dynamics_Type, data = data_s) + geom_smooth() # trench less variance
 # df      AIC
 # M1 13 213.2850
 # M2 10 272.1443
-# M3 12 253.7275
+# M3 12 253.7275summ
 # M4 15 220.7740
 # M5 19 226.2794
 # Warning message:
@@ -101,8 +146,8 @@ AIC(M1, M2, M3, M4, M5)
 # Anyway, gonna choose model M1 cos it's got the lowest AIC
 # Which isn't really mixed effects?
 
-full.gls = gls(RtError ~ (Bp + Int + Pop_Dynamics_Type + lBpPC)^2, data=data)
-stepAIC(full.gls, scope = list(upper=full.gls), data=data, direction="both")
-
-full.glm = glm(RtError ~ (Bp + Int + Pop_Dynamics_Type + lBpPC)^2, data=data)
-stepAIC(full.glm, scope = list(upper=full.glm), data=data, direction="both")
+# full.gls = gls(RtError ~ (Bp + Int + Pop_Dynamics_Type + lBpPC)^2, data=data)
+# stepAIC(full.gls, scope = list(upper=full.gls), data=data, direction="both")
+# 
+# full.glm = glm(RtError ~ (Bp + Int + Pop_Dynamics_Type + lBpPC)^2, data=data)
+# stepAIC(full.glm, scope = list(upper=full.glm), data=data, direction="both")
