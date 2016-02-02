@@ -29,7 +29,7 @@ ggplot(data, aes(x = fit, y = res, colour = Pop_Dynamics_Type) ) + geom_point(si
 
 ggplot(data, aes(x = Bp, y = Error, colour = Pop_Dynamics_Type) ) + geom_point(size=2.5) + geom_smooth() + facet_grid(Pop_Dynamics_Type ~ Int, scale = "free_y")
 
-ggplot(data, aes(x = 1:length(Error), y = Error, colour = Pop_Dynamics_Type) ) + geom_boxplot()
+#ggplot(data, aes(x = 1:length(Error), y = Error, colour = Pop_Dynamics_Type) ) + geom_boxplot()
 
 boxcox(model)
 # use a square root?
@@ -75,14 +75,32 @@ ggplot(data, aes(x = fit3, y = res3, colour = Pop_Dynamics_Type) ) + geom_point(
 # random intercept model
 # remove all terms with Pop_Dynamics_Type
 library("lme4", lib.loc="~/R/x86_64-pc-linux-gnu-library/3.2")
+data <- read.csv("~/Desktop/Software/AlexBioProgs/160121_ErrorRegression/ShaunRegressionInput.txt", sep="")
 
-lme1 <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 | Pop_Dynamics_Type), data = data)
-summary(lme1)
-lme2
+# CLEANING
+data = data[data$Pop_Dynamics_Type != "psmcSim2" & data$Pop_Dynamics_Type != "constantPop",] # these dynamics are bad
+data = data[data$Bp > 1000000,] # remove ones where there's not enough data
+data = data[,-c(3,5,6)] # remove split, recomb and mut rate
+length(data$Error)
+data = data[!duplicated(data$Error),] # remove duplicated error, indicative of something stuffed
 
-M1 <- gls(RtError ~ Bp + Int + Pop_Dynamics_Type + lBpPC + Bp:Int + Bp:Pop_Dynamics_Type + Bp:lBpPC + Int:Pop_Dynamics_Type,  data = data, method = "REML")
-M2 <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 | Pop_Dynamics_Type), data = data); summary(M2);
-M3 <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Bp | Pop_Dynamics_Type), data = data); summary(M3)
+# CHANGING STUFF
+data$lBpPC = log(data$Bp_per_contig) # add log of Bp_per_contig
+data = data[,-3] # add Bp_per_contig cos we've got log now
+
+data$Bp = data$Bp/1000000 # scale population by 1 million
+data$RtError = sqrt(data$Error)
+
+# 
+# lme1 <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 | Pop_Dynamics_Type), data = data)
+# summary(lme1)
+# lme2
+# 
+# M1 <- gls(RtError ~ Bp + Int + Pop_Dynamics_Type + lBpPC + Bp:Int + Bp:Pop_Dynamics_Type + Bp:lBpPC + Int:Pop_Dynamics_Type,  data = data, method = "REML")
+# M2 <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 | Pop_Dynamics_Type), data = data); summary(M2);
+# M3 <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Bp | Pop_Dynamics_Type), data = data); summary(M3)
+
+#################33
 
 # getting some probs with some one. SCALE THE DATA. From the scale manual, https://stat.ethz.ch/R-manual/R-devel/library/base/html/scale.html, centering is performed by subtracting the mean from each value of the data. Scaling is done by dividing each of the (centered) values by their standard deviation.
 numcols <- names(data)
@@ -96,14 +114,14 @@ M1s_remPop <- gls(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC,  data = data_s
 M2s <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 | Pop_Dynamics_Type), data = data_s); summary(M2s);
 M3as <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Bp | Pop_Dynamics_Type), data = data_s); summary(M3as)
 M3bs <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Int | Pop_Dynamics_Type), data = data_s); summary(M3bs)
-M4s <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Bp + Int | Pop_Dynamics_Type), data = data_s); summary(M4s)
+M4s <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Bp + Int | Pop_Dynamics_Type), data = data_s); summary(M4s) ### THE BEST ONE
 Msfull <- lmer(RtError ~ Bp * Int * lBpPC + (1 + Bp + Int | Pop_Dynamics_Type), data = data_s); summary(Msfull) #  not as good as M4s anyway...
 # M5 <- lmer(RtError ~ Bp * Int * lBpPC + (1 + Bp + Int + lBpPC| Pop_Dynamics_Type), data = data)
 AIC(M1s, M1s_remPop, M2s, M3as, M3bs, M4s)
 # AIC(M1, M2, M3)
 
 summary(M4s)
-anova(M4s)
+anova(M4s) # There's no p-values on this table? I'm not going to remove any terms from it.
 
 # assumption checking
 #M4s <- lmer(RtError ~ Bp + Int + lBpPC + Bp:Int + Bp:lBpPC + (1 + Bp + Int | Pop_Dynamics_Type), data = data_s); summary(M4s)

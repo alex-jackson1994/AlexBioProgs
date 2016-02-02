@@ -8,7 +8,7 @@ Regr20Mbp = Regr20Mbp[,-c(3,5,6)] # remove mutation and recomb rates, remove spl
 head(Regr20Mbp)
 summary(Regr20Mbp$Pop_Dynamics_Type)
 summary(Regr20Mbp$Bp)
-ggplot(data = Regr20Mbp, aes(log(Bp_per_contig), Error, colour = Pop_Dynamics_Type)) + geom_point()
+ggplot(data = Regr20Mbp, aes(log(Bp_per_contig), Error, colour = Pop_Dynamics_Type)) + geom_point(size=2.5)
 
 FH_Regr20Mbp = Regr20Mbp[Regr20Mbp$Pop_Dynamics_Type == "fauxHuman",] # only look at faxuHuman
 head(FH_Regr20Mbp)
