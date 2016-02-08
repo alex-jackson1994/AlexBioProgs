@@ -44,34 +44,106 @@ cutoff7gen = c(20000/25*7, 3000000/25*7) # cutoffs of PSMC "goodness" based upon
 cutoff10gen = c(20000/25*10, 3000000/25*10)
 
 # bit of a mess
-ggplot(data=kanga1, mapping=aes(x = log(t_unscaled_low, base=10), y = pop_hist)) + geom_step(colour="red") + labs(xlab("log10(years in past)"), ylab("population size")) + ggtitle("The red kangaroo's population dynamics, and the LGM") + geom_step(data = kanga1, mapping=aes(x=log(t_unscaled_hi, base=10), y=pop_hist), colour="black") + geom_vline(xintercept = log(LGM_max, base=10), colour = "blue") + geom_vline(xintercept = log(LGM_deg, base=10), colour = "blue") + geom_vline(xintercept = log(IA_start, base = 10), colour = "cyan") + geom_vline(xintercept = log(cutoff7gen, base = 10), colour = "red") + geom_vline(xintercept = log(cutoff10gen, base = 10), colour = "black")
+# ggplot(data=kanga1, mapping=aes(x = log(t_unscaled_low, base=10), y = pop_hist)) + geom_step(colour="red") + labs(xlab("log10(years in past)"), ylab("population size")) + ggtitle("The red kangaroo's population dynamics, and the LGM") + geom_step(data = kanga1, mapping=aes(x=log(t_unscaled_hi, base=10), y=pop_hist), colour="black") + geom_vline(xintercept = log(LGM_max, base=10), colour = "blue") + geom_vline(xintercept = log(LGM_deg, base=10), colour = "blue") + geom_vline(xintercept = log(IA_start, base = 10), colour = "cyan") + geom_vline(xintercept = log(cutoff7gen, base = 10), colour = "red") + geom_vline(xintercept = log(cutoff10gen, base = 10), colour = "black")
 
 
 
 ############## BEN'S WORK (modified) ############
-gen_ave = 8.5
-kanga1$t_unscaled_ave = kanga1$t_k*2 * N_0 * gen_ave
-cutoff8.5gen = c(20000/25*8.5, 3000000/25*8.5)
+# gen_ave = 8.5
+# kanga1$t_unscaled_ave = kanga1$t_k*2 * N_0 * gen_ave
+# cutoff8.5gen = c(20000/25*8.5, 3000000/25*8.5)
 
 n <- dim(kanga1)[1] # how many time points there are
-lgTime <- seq(LGM_deg,IA_start,length.out=n) # time between ice age start and antartic ice sheets declining
-lgmupper <- rep(max(kanga1$pop_hist)*1.1,n) # lgm upper/lower are just things to fill in
-lgmlower <- rep(0,n)
+# lgTime <- seq(LGM_deg,IA_start,length.out=n) # time between ice age start and antartic ice sheets declining
+# lgmupper <- rep(max(kanga1$pop_hist)*1.1,n) # lgm upper/lower are just things to fill in
+# lgmlower <- rep(0,n)
 
-g_hi <- ggplot(kanga1,aes(x=t_unscaled_hi,y=pop_hist))+theme_bw()+geom_step()+ggtitle('Upper Estimate')+coord_cartesian()+
-  xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff10gen[1]),colour='red',linetype='dashed')+
-  geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='blue',alpha=0.4,fill='blue') # alpha is transparency
-ggsave(file="/home/alex/Desktop/Data/redKangaroo/rPlots/redKangaroo_10gen.pdf",g_hi)
+### From psmc "-t FLOAT    maximum 2N0 coalescent time [15]" output, I suspect Tmax = 15. This particular run is 4+5*3+4, meaning: 4 length 1 intervals, then the next 5 intervals have length 3, then the last interval has length 4.
+### I believe (not 100% sure) thatthe n we are interested in is the sum of the intervals, i.e. for us, n=4+5*3+4. T_n = Tmax (S.I. of Li)
+# n_atomic = 4+5*3+4
+# Tmax =15 # PSMC default
+# # entering by hand bc I'm lazy
+# psmc_int_ts = c(0,4,7,10,13,16,19,23)
+# psmc_int_ts = as.numeric(lapply(c(0,4,7,10,13,16,19,23), function(i){0.1*exp(i/n_atomic*log(1+10*Tmax))-0.1} ) ) # taken from the formula for t_i from the PSMC paper
+# ^ is on the 2N_0 scale, need to unscale.
+# psmc_int_ts_low = psmc_int_ts * 2 * N_0 * gen_low
+# psmc_int_ts_hi = psmc_int_ts * 2 * N_0 * gen_hi
+#l = length(psmc_int_ts)
+#psmc_int_ts = psmc_int_ts[-c(l-3, l-2,l-1,l)] # remove the last few which are just waaaay to large
 
-g_ave <- ggplot(kanga1,aes(x=t_unscaled_ave,y=pop_hist))+theme_bw()+geom_step()+ggtitle('Average Estimate')+coord_cartesian(ylim=c(0,max(kanga1$pop_hist)*1.1))+
-  xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff8.5gen[1]),colour='red',linetype='dashed')+
-  geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='blue',alpha=0.4,fill='blue') # alpha is transparency
-ggsave(file="/home/alex/Desktop/Data/redKangaroo/rPlots/redKangaroo_8.5gen.pdf",g_ave)
+### Update 8/2/16: Jono & co. say don't bother with the mean, just do lower and upper generation time and plot them on the same plot
 
-g_low <- ggplot(kanga1,aes(x=t_unscaled_low,y=pop_hist))+theme_bw()+geom_step()+ggtitle('Lower Estimate')+coord_cartesian(ylim=c(0,max(kanga1$pop_hist)*1.1))+
-  xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff7gen[1]),colour='red',linetype='dashed')+
-  geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='blue',alpha=0.4,fill='blue') # alpha is transparency
-ggsave(file="/home/alex/Desktop/Data/redKangaroo/rPlots/redKangaroo_7gen.pdf",g_low)
+# high estimate
+ g_hi_low <- ggplot(kanga1,aes(x=t_unscaled_hi,y=pop_hist))+theme_bw()+geom_step(colour="blue")+ ggtitle('Upper And Lower Estimates')+coord_cartesian(xlim=c(0,6*10^5))+geom_point(colour="blue")+
+  xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff10gen[1]),colour='red', linetype="dashed")+
+  #geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='blue',alpha=0.4,fill='blue') # alpha is transparency
+   # low estimate
+   geom_step(data=kanga1, aes(x=t_unscaled_low, y=pop_hist ), colour="green")+geom_point(data=kanga1, aes(x=t_unscaled_low, y=pop_hist ), colour="green")
+   # mark the PSMC time intervals
+#      geom_vline( xintercept=psmc_int_ts_low, colour="green", linetype="dashed" ) + geom_vline( xintercept=psmc_int_ts_hi, colour="blue", linetype="dashed" )
+
+ g_hi_low
+
+ggsave(file="/home/alex/Desktop/Data/redKangaroo/rPlots/redKangaroo_bothgens.pdf",g_hi_low)
+
+############# PLOT ALL
+setwd("/home/alex/Desktop/Data/redKangaroo/Ints/redKangaroo/")
+filelist = list.files(pattern = "*.txt", recursive = TRUE)
+
+# We need a script to grab the theta_0 values but I'm not good enough to do that.
+theta_0_s  = c(0.019134, 0.021457, 0.022158, 0.022474, 0.022652, 0.022768, 0.022849) # taking these manually, which is a pain in the butt...
+N_0_s = theta_0_s / (4*mu) / s # = 1854 apparently...
+
+alloutput = data.frame()
+count = 1
+for (file in filelist) {
+  dat <- read.delim(file)
+  
+  dat$t_unscaled_low = dat$t_k*2 * N_0_s[count] * gen_low
+  dat$t_unscaled_hi = dat$t_k*2 * N_0_s[count] * gen_hi
+  dat$pop_hist = dat$lambda_k * N_0_s[count]
+  dat$type = file
+  
+#   print(file)
+#   print(dat)
+  alloutput = rbind(alloutput, dat)
+  
+  count = count + 1
+}
+
+kanga1$type = "kanga1"
+alloutput = rbind(alloutput, kanga1)
+
+# ggplot(alloutput,aes(x=t_k,y=lambda_k))+
+#   geom_step(aes(colour=type))
+
+gMoreIntsHi <- ggplot(alloutput,aes(x=t_unscaled_hi,y=pop_hist, colour=type))+theme_bw()+geom_step()+ ggtitle('Upper Estimate')+coord_cartesian(xlim=c(0,6*10^5))+geom_point()+
+  xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff10gen[1]),colour='red', linetype="dashed")#+
+  #geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='blue',alpha=0.4,fill='blue') # alpha is transparency
+  # low estimate
+#  geom_step(data=kanga1, aes(x=t_unscaled_low, y=pop_hist ), colour="green")+geom_point(data=kanga1, aes(x=t_unscaled_low, y=pop_hist ), colour="green")
+
+# tmp$type <- 'tmp'
+# tmp2$type <- 'tmp2'
+# dat <- rbind(tmp,tmp2)
+
+
+
+
+# g_hi <- ggplot(kanga1,aes(x=t_unscaled_hi,y=pop_hist))+theme_bw()+geom_step()+ggtitle('Upper Estimate')+coord_cartesian()+
+#   xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff10gen[1]),colour='red',linetype='dashed')+
+#   geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='blue',alpha=0.4,fill='blue') # alpha is transparency
+# ggsave(file="/home/alex/Desktop/Data/redKangaroo/rPlots/redKangaroo_10gen.pdf",g_hi)
+
+#g_ave <- ggplot(kanga1,aes(x=t_unscaled_ave,y=pop_hist))+theme_bw()+geom_step()+ggtitle('Average Estimate')+coord_cartesian(ylim=c(0,max(kanga1$pop_hist)*1.1))+
+#  xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff8.5gen[1]),colour='red'#,linetype='dashed')+
+#  geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='blue',alpha=0.4,fill='blue') # alpha is transparency
+#ggsave(file="/home/alex/Desktop/Data/redKangaroo/rPlots/redKangaroo_8.5gen.pdf",g_ave)
+
+# g_low <- ggplot(kanga1,aes(x=t_unscaled_low,y=pop_hist))+theme_bw()+geom_step()+ggtitle('Lower Estimate')+coord_cartesian(ylim=c(0,max(kanga1$pop_hist)*1.1))+
+#   xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff7gen[1]),colour='red',linetype='dashed')+
+#   geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='blue',alpha=0.4,fill='blue') # alpha is transparency
+# ggsave(file="/home/alex/Desktop/Data/redKangaroo/rPlots/redKangaroo_7gen.pdf",g_low)
 
 ######################################
 
