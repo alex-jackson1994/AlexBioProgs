@@ -53,10 +53,10 @@ cutoff10gen = c(20000/25*10, 3000000/25*10)
 # kanga1$t_unscaled_ave = kanga1$t_k*2 * N_0 * gen_ave
 # cutoff8.5gen = c(20000/25*8.5, 3000000/25*8.5)
 
-n <- dim(kanga1)[1] # how many time points there are
-# lgTime <- seq(LGM_deg,IA_start,length.out=n) # time between ice age start and antartic ice sheets declining
-# lgmupper <- rep(max(kanga1$pop_hist)*1.1,n) # lgm upper/lower are just things to fill in
-# lgmlower <- rep(0,n)
+# n <- dim(kanga1)[1] # how many time points there are
+#  lgTime <- seq(LGM_deg,IA_start,length.out=n) # time between ice age start and antartic ice sheets declining
+#  lgmupper <- rep(max(kanga1$pop_hist)*1.1,n) # lgm upper/lower are just things to fill in
+#  lgmlower <- rep(0,n)
 
 ### From psmc "-t FLOAT    maximum 2N0 coalescent time [15]" output, I suspect Tmax = 15. This particular run is 4+5*3+4, meaning: 4 length 1 intervals, then the next 5 intervals have length 3, then the last interval has length 4.
 ### I believe (not 100% sure) thatthe n we are interested in is the sum of the intervals, i.e. for us, n=4+5*3+4. T_n = Tmax (S.I. of Li)
@@ -104,9 +104,21 @@ for (file in filelist) {
   dat$pop_hist = dat$lambda_k * N_0_s[count]
   dat$type = file
   
+  n <- dim(dat)[1] # how many time points there are
+  lgTime <- seq(LGM_deg,IA_start,length.out=n) # time between ice age start and antartic ice sheets declining
+  lgmupper <- rep(max(dat$pop_hist)*1.1,n) # lgm upper/lower are just things to fill in
+  lgmlower <- rep(0,n)
+  
+  dat_plot <- ggplot(dat,aes(x=t_unscaled_hi,y=pop_hist))+theme_bw()+geom_step(colour="red")+ ggtitle('Upper Estimate (red) and Lower Estimate (blue)')+coord_cartesian(xlim=c(0,4*10^5),ylim=c(0,8000))+geom_point(colour="red")+
+    xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff10gen[1]),colour='red', linetype="dashed")+
+    geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='purple',alpha=0.3,fill='purple') +
+   geom_step(data=dat, aes(x=t_unscaled_low, y=pop_hist ), colour="blue")+geom_point(data=dat, aes(x=t_unscaled_low, y=pop_hist ), colour="blue")+geom_vline(xintercept=c(cutoff7gen[1]),colour='blue', linetype="dashed")
+  #setwd("/home/alex/Desktop/Data/redKangaroo/rPlots/Ints/")
+  print(file)
+  ggsave(paste(file, ".pdf", sep=""), dat_plot)
 #   print(file)
 #   print(dat)
-  alloutput = rbind(alloutput, dat)
+  #alloutput = rbind(alloutput, dat)
   
   count = count + 1
 }
@@ -116,18 +128,62 @@ alloutput = rbind(alloutput, kanga1)
 
 # ggplot(alloutput,aes(x=t_k,y=lambda_k))+
 #   geom_step(aes(colour=type))
+n <- dim(alloutput)[1] # how many time points there are
+lgTime <- seq(LGM_deg,IA_start,length.out=n) # time between ice age start and antartic ice sheets declining
+lgmupper <- rep(max(alloutput1$pop_hist)*1.1,n) # lgm upper/lower are just things to fill in
+lgmlower <- rep(0,n)
 
-gMoreIntsHi <- ggplot(alloutput,aes(x=t_unscaled_hi,y=pop_hist, colour=type))+theme_bw()+geom_step()+ ggtitle('Upper Estimate')+coord_cartesian(xlim=c(0,6*10^5))+geom_point()+
-  xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff10gen[1]),colour='red', linetype="dashed")#+
-  #geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='blue',alpha=0.4,fill='blue') # alpha is transparency
+
+gMoreIntsHi <- ggplot(alloutput,aes(x=t_unscaled_hi,y=pop_hist, colour=type))+theme_bw()+geom_step()+ ggtitle('Upper Estimate')+coord_cartesian(xlim=c(0,4*10^5),ylim=c(0,8000))+geom_point()+
+  xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff10gen[1]),colour='red', linetype="dashed")+
+  geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='blue',alpha=0.4,fill='blue') # alpha is transparency
   # low estimate
 #  geom_step(data=kanga1, aes(x=t_unscaled_low, y=pop_hist ), colour="green")+geom_point(data=kanga1, aes(x=t_unscaled_low, y=pop_hist ), colour="green")
+gMoreIntsHi 
 
+gMoreIntsLow <- ggplot(alloutput,aes(x=t_unscaled_low,y=pop_hist, colour=type))+theme_bw()+geom_step()+ ggtitle('Lower Estimate')+coord_cartesian(xlim=c(0,3*10^5),ylim=c(0,8000))+geom_point()+
+  xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff7gen[1]),colour='red', linetype="dashed")+
+  geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='blue',alpha=0.4,fill='blue') # alpha is transparency
+# low estimate
+#  geom_step(data=kanga1, aes(x=t_unscaled_low, y=pop_hist ), colour="green")+geom_point(data=kanga1, aes(x=t_unscaled_low, y=pop_hist ), colour="green")
+gMoreIntsLow
 # tmp$type <- 'tmp'
 # tmp2$type <- 'tmp2'
 # dat <- rbind(tmp,tmp2)
 
+##################################3
+##################################
+# Int10 <- read.delim("/home/alex/Desktop/Data/redKangaroo/Ints/redKangaroo/redKangarooBp1020215700Int10*1.txt")
+# g10 <- ggplot(Int10,aes(x=t_unscaled_hi,y=pop_hist))+theme_bw()+geom_step(colour="blue")+ ggtitle('Upper And Lower Estimates (Int10)')+coord_cartesian(xlim=c(0,4*10^5),ylim=c(0,8000))+geom_point(colour="blue")+
+#   xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff10gen[1]),colour='red', linetype="dashed")+
+#   geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='blue',alpha=0.3,fill='blue') # alpha is transparency
+#   # low estimate
+#   geom_step(data=kanga1, aes(x=t_unscaled_low, y=pop_hist ), colour="green")+geom_point(data=kanga1, aes(x=t_unscaled_low, y=pop_hist ), colour="green")
+# ggsave(file="/home/alex/Desktop/Data/redKangaroo/rPlots/redKangarooInt10.pdf",g10)
 
+#redKangarooBp1020215700Int4+25\*2+4+6/redKangarooBp1020215700Int4+25\*2+4+6.txt
+
+rK_MoreInts <- read.delim("redKangarooBp1020215700Int4+25*2+4+6/redKangarooBp1020215700Int4+25*2+4+6.txt")
+
+t0 = 0.018887
+n0 = t0 / (4*mu) / s
+
+rK_MoreInts$t_unscaled_low = rK_MoreInts$t_k*2 * n0 * gen_low
+rK_MoreInts$t_unscaled_hi = rK_MoreInts$t_k*2 * n0 * gen_hi
+rK_MoreInts$pop_hist = rK_MoreInts$lambda_k * n0
+
+n <- dim(rK_MoreInts)[1] # how many time points there are
+lgTime <- seq(LGM_deg,IA_start,length.out=n) # time between ice age start and antartic ice sheets declining
+lgmupper <- rep(max(rK_MoreInts$pop_hist)*1.1,n) # lgm upper/lower are just things to fill in
+lgmlower <- rep(0,n)
+
+rK_MoreInts_plot <- ggplot(rK_MoreInts,aes(x=t_unscaled_hi,y=pop_hist, colour="red"))+theme_bw()+geom_step()+ ggtitle('Upper Estimate (red) and Lower Estimate (blue)')+coord_cartesian(xlim=c(0,4*10^5),ylim=c(0,8000))+geom_point()+
+  xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+geom_vline(xintercept=c(cutoff10gen[1]),colour='red', linetype="dashed")+
+  geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='purple',alpha=0.3,fill='purple') +
+  geom_step(data=rK_MoreInts, aes(x=t_unscaled_low, y=pop_hist ), colour="blue")+geom_point(data=rK_MoreInts, aes(x=t_unscaled_low, y=pop_hist ), colour="blue")+geom_vline(xintercept=c(cutoff7gen[1]),colour='blue', linetype="dashed")
+#setwd("/home/alex/Desktop/Data/redKangaroo/rPlots/Ints/")
+print(file)
+ggsave("rK_MoreInts.pdf", rK_MoreInts_plot)
 
 
 # g_hi <- ggplot(kanga1,aes(x=t_unscaled_hi,y=pop_hist))+theme_bw()+geom_step()+ggtitle('Upper Estimate')+coord_cartesian()+
