@@ -182,7 +182,7 @@ lgTime <- seq(LGM_deg,IA_start,length.out=n) # time between ice age start and an
 lgmupper <- rep(max(kanga_res$Pops)*1.1,n) # lgm upper/lower are just things to fill in
 lgmlower <- rep(0,n)
 kanga_res_plot = ggplot(kanga_res, aes(x=Times, y=Pops, colour = Type ))+theme_bw()+geom_step(size=1) +
-  xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+ ggtitle('Tasmanian Devil Effective Population Estimates from PSMC - Comparison of Resolution') + coord_cartesian(xlim=c(500,4*10^5),ylim=c(0,10000))+
+  xlab("\nYears Before Present")+ylab(bquote(''*N[e]*'\n'))+ ggtitle('Red Kangaroo Effective Population Estimates from PSMC - Comparison of Resolution') + coord_cartesian(xlim=c(500,4*10^5),ylim=c(0,10000))+
   geom_ribbon(aes(x=lgTime,ymax=lgmupper,ymin=lgmlower),colour='yellow',alpha=0.2,fill='yellow') +
   geom_vline(xintercept=Humans, colour='black') + geom_vline(aes(xintercept=cutoffs, colour=Type), linetype="dashed")+ scale_x_continuous(trans="log10")
 kanga_res_plot 
